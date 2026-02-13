@@ -69,3 +69,82 @@ exports.deleteUser = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// Request to become a vendor (User)
+exports.requestVendorDetails = async (req, res) => {
+    try {
+        const { brandName, contactNumber, address } = req.body;
+
+        if (!brandName || !contactNumber || !address) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        const user = await User.findById(req.user.id);
+
+        if (user.role === 'vendor') {
+            return res.status(400).json({ message: 'You are already a vendor' });
+        }
+
+        if (user.vendorStatus === 'pending') {
+            return res.status(400).json({ message: 'Verification pending' });
+        }
+
+        user.brandName = brandName;
+        user.contactNumber = contactNumber;
+        user.address = address;
+        user.vendorStatus = 'pending';
+
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Vendor request submitted successfully'
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Get all vendor requests (Admin)
+exports.getAllVendorRequests = async (req, res) => {
+    try {
+        const users = await User.find({ vendorStatus: 'pending' });
+        res.status(200).json({
+            success: true,
+            users
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Approve/Reject Vendor (Admin)
+exports.updateVendorStatus = async (req, res) => {
+    try {
+        const { status } = req.body; // 'approved' or 'rejected'
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        user.vendorStatus = status;
+
+        if (status === 'approved') {
+            user.role = 'vendor';
+        }
+
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Vendor request ${status}`
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};

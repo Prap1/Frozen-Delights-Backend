@@ -47,10 +47,57 @@ exports.createProduct = async (req, res) => {
     }
 };
 
+const ApiFeatures = require('../utils/apifeatures');
+
 // Get All Products
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await Product.find();
+        const resultPerPage = 8;
+        const productsCount = await Product.countDocuments();
+
+        const apiFeature = new ApiFeatures(Product.find(), req.query)
+            .search()
+            .filter()
+            .sort();
+
+        let products = await apiFeature.query;
+        let filteredProductsCount = products.length;
+
+        apiFeature.pagination(resultPerPage);
+
+        // We need to clone the query for pagination or handle it differently if we want exact count after filter
+        // For simplicity reusing the query but Mongoose queries are distinct.
+        // Let's re-run for pagination or just slice if dataset is small.
+        // Actually ApiFeatures modifies the query object.
+        // To get paginated results, we need to run pagination on the ALREADY filtered query.
+        // But to get total count after filter, we need to execute before pagination.
+
+        // Re-instantiating for safe pagination execution
+        const apiFeaturePagination = new ApiFeatures(Product.find(), req.query)
+            .search()
+            .filter()
+            .sort()
+            .pagination(resultPerPage);
+
+        const paginatedProducts = await apiFeaturePagination.query;
+
+
+        res.status(200).json({
+            success: true,
+            products: paginatedProducts,
+            productsCount,
+            resultPerPage,
+            filteredProductsCount,
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Get Vendor Products
+exports.getVendorProducts = async (req, res) => {
+    try {
+        const products = await Product.find({ vendor: req.user.id });
         res.status(200).json({
             success: true,
             products

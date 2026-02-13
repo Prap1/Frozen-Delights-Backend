@@ -34,6 +34,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/discounts', discountRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/content', contentRoutes);
+const paymentRoutes = require('./routes/paymentRoutes');
+app.use('/api/payment', paymentRoutes);
 app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
@@ -48,3 +51,4 @@ mongoose.connect(process.env.MONGO_URI)
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+// Server restart trigger

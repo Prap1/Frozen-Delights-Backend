@@ -4,7 +4,6 @@ const userSchema = new mongoose.Schema({
     username: {
         type: String,
         required: true,
-        unique: true
     },
     email: {
         type: String,
@@ -24,10 +23,16 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    vendorStatus: {
+        type: String,
+        enum: ['none', 'pending', 'approved', 'rejected'],
+        default: 'none'
+    },
     // For vendors
     brandName: String,
     contactNumber: String,
     address: String,
+    stripeCustomerId: String,
 
     // For users
     deliveryAddress: String,
