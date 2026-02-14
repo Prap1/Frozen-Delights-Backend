@@ -26,6 +26,23 @@ class ApiFeatures {
 
         removeFields.forEach((key) => delete queryCopy[key]);
 
+        // 🛠 Fix: Convert flat keys like 'price[gte]' to nested objects { price: { gte: ... } }
+        // This handles cases where Express query parser yields flat keys
+        for (let key in queryCopy) {
+            if (key.includes('[') && key.includes(']')) {
+                const parts = key.split('[');
+                const field = parts[0];
+                const operator = parts[1].replace(']', '');
+
+                if (!queryCopy[field]) {
+                    queryCopy[field] = {};
+                }
+
+                queryCopy[field][operator] = queryCopy[key];
+                delete queryCopy[key];
+            }
+        }
+
         // Filter For Price and Rating
         let queryStr = JSON.stringify(queryCopy);
         queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (key) => `$${key}`);

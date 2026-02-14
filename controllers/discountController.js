@@ -65,39 +65,39 @@ exports.deleteDiscount = async (req, res) => {
     }
 };
 
-// Validate Discount (User/Checkout) - Optional helper
+// Validate Discount (User/Checkout)
 exports.validateDiscount = async (req, res) => {
-    const { code, cartTotal, productIds, categoryIds, isFirstOrder } = req.body;
+    const { code, cartTotal } = req.body;
+
     try {
+        if (!code) {
+            return res.status(400).json({ message: 'Please provide a discount code' });
+        }
+
         const discount = await Discount.findOne({ code: code.toUpperCase(), isActive: true });
 
         if (!discount) {
-            return res.status(404).json({ message: 'Invalid discount code' });
+            return res.status(404).json({ message: 'Invalid or inactive discount code' });
         }
 
         if (new Date() > discount.expiryDate) {
-            return res.status(400).json({ message: 'Discount code expired' });
+            return res.status(400).json({ message: 'Discount code has expired' });
         }
 
         if (cartTotal < discount.minOrderValue) {
-            return res.status(400).json({ message: `Minimum order value of $${discount.minOrderValue} required` });
+            return res.status(400).json({ message: `Minimum order value of ₹${discount.minOrderValue} required` });
         }
 
-        // Logic check for applicableTo (simplified)
-        // This is where you'd implement the complex logic checking productIds vs targetId
-        let isValid = true;
-        if (discount.applicableTo === 'first_order' && !isFirstOrder) {
-            isValid = false;
-        }
-        // ... more checks for product/category
-
-        if (!isValid) {
-            return res.status(400).json({ message: 'Discount code not applicable to this order' });
-        }
+        // Calculate discount amount
+        const discountAmount = (cartTotal * discount.percentage) / 100;
 
         res.status(200).json({
             success: true,
-            discount
+            discount: {
+                code: discount.code,
+                percentage: discount.percentage,
+                amount: discountAmount
+            }
         });
 
     } catch (err) {

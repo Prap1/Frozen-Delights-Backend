@@ -7,6 +7,11 @@ exports.createProduct = async (req, res) => {
     try {
         req.body.vendor = req.user.id;
 
+        console.log("Create Product Request:");
+        console.log("req.file:", req.file);
+        console.log("req.body:", req.body);
+        console.log("req.headers content-type:", req.headers['content-type']);
+
         // Verify if req.body.images is NOT present then use file upload
         // If image uploaded
         if (req.file) {
@@ -60,7 +65,10 @@ exports.getAllProducts = async (req, res) => {
             .filter()
             .sort();
 
+        console.log("getAllProducts Query:", req.query);
+
         let products = await apiFeature.query;
+        console.log(`Filtered Count: ${products.length}`);
         let filteredProductsCount = products.length;
 
         apiFeature.pagination(resultPerPage);
@@ -97,7 +105,25 @@ exports.getAllProducts = async (req, res) => {
 // Get Vendor Products
 exports.getVendorProducts = async (req, res) => {
     try {
+        console.log(`Fetching products for vendor: ${req.user.id}`);
         const products = await Product.find({ vendor: req.user.id });
+        console.log(`Found ${products.length} products for vendor ${req.user.id}`);
+
+        res.status(200).json({
+            success: true,
+            products
+        });
+    } catch (err) {
+        console.error("Error in getVendorProducts:", err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Get All Products (Admin)
+exports.getAdminProducts = async (req, res) => {
+    try {
+        const products = await Product.find();
+
         res.status(200).json({
             success: true,
             products

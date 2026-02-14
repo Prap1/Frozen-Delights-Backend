@@ -7,13 +7,16 @@ const {
     deleteUser,
     requestVendorDetails,
     getAllVendorRequests,
-    updateVendorStatus
+    updateVendorStatus,
+    updateUserProfile
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 
 router.use(protect);
 
 // User routes
+router.put('/profile/update', upload.single('profileImage'), updateUserProfile);
 router.post('/become-vendor', requestVendorDetails);
 
 // Admin routes

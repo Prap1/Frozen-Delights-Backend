@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { newOrder, getSingleOrder, myOrders, getAllOrders, updateOrder, deleteOrder, getVendorOrders } = require('../controllers/orderController');
+const { newOrder, getSingleOrder, myOrders, getAllOrders, updateOrder, deleteOrder, getVendorOrders, cancelOrder } = require('../controllers/orderController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 router.route('/new').post(protect, newOrder);
@@ -10,6 +10,9 @@ router.route('/vendor/orders').get(protect, authorize('vendor'), getVendorOrders
 router.route('/:id')
     .get(protect, getSingleOrder)
     .delete(protect, authorize('admin'), deleteOrder);
+
+// User cancel order
+router.route('/:id/cancel').put(protect, cancelOrder);
 
 // Admin / Vendor route for status update
 router.route('/admin/:id')

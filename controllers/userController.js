@@ -29,6 +29,50 @@ exports.getSingleUser = async (req, res) => {
     }
 };
 
+// Update user profile (User/Admin/Vendor)
+exports.updateUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.username = req.body.username || user.username;
+        user.email = req.body.email || user.email;
+        user.phone = req.body.phone || user.phone;
+        user.address = req.body.address || user.address;
+
+        if (req.file) {
+            user.profileImage = req.file.path; // Or construct full URL if needed
+        }
+
+        // If vendor, allow updating brand info if needed, or keep separate
+        if (user.role === 'vendor') {
+            user.brandName = req.body.brandName || user.brandName;
+            user.contactNumber = req.body.contactNumber || user.contactNumber;
+        }
+
+        const updatedUser = await user.save();
+
+        res.status(200).json({
+            success: true,
+            user: {
+                id: updatedUser._id,
+                username: updatedUser.username,
+                email: updatedUser.email,
+                phone: updatedUser.phone,
+                role: updatedUser.role,
+                address: updatedUser.address,
+                profileImage: updatedUser.profileImage,
+                // Add other fields as necessary for frontend state
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // Update user role (Admin)
 exports.updateUserRole = async (req, res) => {
     try {

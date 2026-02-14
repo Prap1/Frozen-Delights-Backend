@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const contentSchema = new mongoose.Schema({
     type: {
         type: String,
-        enum: ['feature', 'announcement', 'about'],
+        enum: ['feature', 'announcement', 'about', 'faq'],
         required: true
     },
     title: {
@@ -13,6 +13,12 @@ const contentSchema = new mongoose.Schema({
     content: {
         type: String,
         required: true
+    },
+    subtitle: {
+        type: String // Used as Category for FAQs
+    },
+    image: {
+        type: String // For About Us or other visual content
     },
     icon: {
         type: String // For features (emoji or icon class)
