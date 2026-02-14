@@ -22,41 +22,41 @@ exports.registerInitiate = async (req, res) => {
         });
     }
 
-   try {
-    const existingUser = await User.findOne({ email });
+    try {
+        const existingUser = await User.findOne({ email });
 
-    if (existingUser) {
-        return res.status(400).json({
-            message: 'User with this email already exists'
+        if (existingUser) {
+            return res.status(400).json({
+                message: 'User with this email already exists'
+            });
+        }
+
+        const otp = generateOTP();
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Remove old OTPs for this email
+        await OTP.deleteMany({ email });
+
+        await OTP.create({
+            email,
+            otp,
+            password: hashedPassword
         });
+
+        await sendEmail({
+            email,
+            subject: 'Frozen Delight - Email Verification',
+            message: `Your OTP for registration is: ${otp}`
+        });
+
+        res.status(200).json({
+            message: 'OTP sent to email. Please verify.'
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
     }
-
-    const otp = generateOTP();
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Remove old OTPs for this email
-    await OTP.deleteMany({ email });
-
-    await OTP.create({
-        email,
-        otp,
-        password: hashedPassword
-    });
-
-    await sendEmail({
-        email,
-        subject: 'Frozen Delight - Email Verification',
-        message: `Your OTP for registration is: ${otp}`
-    });
-
-    res.status(200).json({
-        message: 'OTP sent to email. Please verify.'
-    });
-
-} catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server Error' });
-}
 
 };
 
@@ -127,7 +127,9 @@ exports.verifyOTPAndRegister = async (req, res) => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
-                role: user.role
+                email: user.email,
+                role: user.role,
+                profileImage: user.profileImage,
             }
         });
 
@@ -181,7 +183,8 @@ exports.login = async (req, res) => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                profileImage: user.profileImage,
             }
         });
 
