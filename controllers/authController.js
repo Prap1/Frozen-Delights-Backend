@@ -15,6 +15,8 @@ const generateOTP = () => {
 exports.registerInitiate = async (req, res) => {
     const { username, email, password } = req.body;
 
+    const normalizedEmail = email ? email.toLowerCase().trim() : '';
+
     // ✅ REQUIRED VALIDATION
     if (!username || !email || !password) {
         return res.status(400).json({
@@ -35,16 +37,17 @@ exports.registerInitiate = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Remove old OTPs for this email
-        await OTP.deleteMany({ email });
+        await OTP.deleteMany({ email: normalizedEmail });
+
 
         await OTP.create({
-            email,
+            email: normalizedEmail,
             otp,
             password: hashedPassword
         });
 
         await sendEmail({
-            email,
+            email: normalizedEmail,
             subject: 'Frozen Delight - Email Verification',
             message: `Your OTP for registration is: ${otp}`
         });
@@ -65,6 +68,7 @@ exports.registerInitiate = async (req, res) => {
 // ============================
 exports.verifyOTPAndRegister = async (req, res) => {
     const { username, email, otp } = req.body;
+    const normalizedEmail = email ? email.toLowerCase().trim() : '';
 
     if (!username || !email || !otp) {
         return res.status(400).json({
@@ -73,22 +77,29 @@ exports.verifyOTPAndRegister = async (req, res) => {
     }
 
     try {
-        const otpRecord = await OTP.findOne({ email });
-
+const otpRecord = await OTP.findOne({ email: normalizedEmail })
+  .sort({ createdAt: -1 });
         if (!otpRecord) {
             return res.status(400).json({ message: 'OTP expired or invalid' });
         }
 
+        // Check if OTP has expired (5 minutes = 300000 ms)
+        const otpAge = Date.now() - new Date(otpRecord.createdAt).getTime();
+        if (otpAge > 300000) {
+            await OTP.deleteMany({ email: normalizedEmail });
+            return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+        }
+
         // ✅ SAFETY CHECK
         if (!otpRecord.password) {
-            await OTP.deleteMany({ email });
+            await OTP.deleteMany({ email: normalizedEmail });
             return res.status(400).json({
                 message: 'Password missing. Please register again.'
             });
         }
 
         if (otpRecord.attempts >= 5) {
-            await OTP.deleteMany({ email });
+            await OTP.deleteMany({ email: normalizedEmail });
             return res.status(429).json({ message: 'Too many attempts. Try again.' });
         }
 
@@ -100,13 +111,13 @@ exports.verifyOTPAndRegister = async (req, res) => {
 
         const user = await User.create({
             username,
-            email,
+            email: normalizedEmail,
             password: otpRecord.password,
             isVerified: true,
             role: 'user'
         });
 
-        await OTP.deleteMany({ email });
+        await OTP.deleteMany({ email: normalizedEmail });
 
         const token = jwt.sign(
             { id: user._id, role: user.role },
@@ -144,13 +155,14 @@ exports.verifyOTPAndRegister = async (req, res) => {
 // ============================
 exports.login = async (req, res) => {
     const { email, password } = req.body;
+    const normalizedEmail = email ? email.toLowerCase().trim() : '';
 
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password required' });
     }
 
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -216,9 +228,10 @@ exports.logout = (req, res) => {
 // ============================
 exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
+    const normalizedEmail = email ? email.toLowerCase().trim() : '';
 
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
 
         // Do NOT reveal user existence
         if (!user) {
@@ -228,12 +241,12 @@ exports.forgotPassword = async (req, res) => {
         }
 
         const otp = generateOTP();
-        await OTP.deleteMany({ email });
+        await OTP.deleteMany({ email: normalizedEmail });
 
-        await OTP.create({ email, otp });
+        await OTP.create({ email: normalizedEmail, otp });
 
         await sendEmail({
-            email,
+            email: normalizedEmail,
             subject: 'Frozen Delight - Password Reset',
             message: `Your OTP for password reset is: ${otp}`
         });
@@ -253,16 +266,25 @@ exports.forgotPassword = async (req, res) => {
 // ============================
 exports.resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
+    const normalizedEmail = email ? email.toLowerCase().trim() : '';
 
     try {
-        const otpRecord = await OTP.findOne({ email });
+const otpRecord = await OTP.findOne({ email: normalizedEmail })
+  .sort({ createdAt: -1 });
 
         if (!otpRecord) {
             return res.status(400).json({ message: 'OTP expired or invalid' });
         }
 
+        // Check if OTP has expired (5 minutes = 300000 ms)
+        const otpAge = Date.now() - new Date(otpRecord.createdAt).getTime();
+        if (otpAge > 300000) {
+            await OTP.deleteMany({ email: normalizedEmail });
+            return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+        }
+
         if (otpRecord.attempts >= 5) {
-            await OTP.deleteMany({ email });
+            await OTP.deleteMany({ email: normalizedEmail });
             return res.status(429).json({ message: 'Too many attempts' });
         }
 
@@ -272,7 +294,7 @@ exports.resetPassword = async (req, res) => {
             return res.status(400).json({ message: 'Invalid OTP' });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -280,7 +302,7 @@ exports.resetPassword = async (req, res) => {
         user.password = await bcrypt.hash(newPassword, 10);
         await user.save();
 
-        await OTP.deleteMany({ email });
+        await OTP.deleteMany({ email: normalizedEmail });
 
         res.status(200).json({
             message: 'Password reset successful. Please login.'
