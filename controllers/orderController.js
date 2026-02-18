@@ -80,7 +80,7 @@ async function updateStock(id, quantity) {
 // Get Single Order
 exports.getSingleOrder = async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id).populate('user', 'name email');
+        const order = await Order.findById(req.params.id).populate('user', 'username email').populate('orderItems.vendor', 'username role brandName');
 
         if (!order) {
             return res.status(404).json({ message: 'Order not found with this Id' });
@@ -182,7 +182,7 @@ exports.myOrders = async (req, res) => {
 // Get Vendor Orders
 exports.getVendorOrders = async (req, res) => {
     try {
-        const orders = await Order.find({ 'orderItems.vendor': req.user._id });
+        const orders = await Order.find({ 'orderItems.vendor': req.user._id }).populate('user', 'username email');
 
         res.status(200).json({
             success: true,
@@ -196,7 +196,7 @@ exports.getVendorOrders = async (req, res) => {
 // Get All Orders -- Admin
 exports.getAllOrders = async (req, res) => {
     try {
-        const orders = await Order.find();
+        const orders = await Order.find().populate('user', 'username email');
 
         let totalAmount = 0;
         orders.forEach(order => {
@@ -216,7 +216,7 @@ exports.getAllOrders = async (req, res) => {
 // Update Order Status -- Admin / Vendor (basic)
 exports.updateOrder = async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id).populate('user', 'name email');
+        const order = await Order.findById(req.params.id).populate('user', 'username email');
 
         if (!order) {
             return res.status(404).json({ message: 'Order not found with this Id' });
@@ -249,7 +249,7 @@ exports.updateOrder = async (req, res) => {
         // Send Email on Status Change
         const message = `
             <h1>Order Status Updated</h1>
-            <p>Hi ${order.user.name},</p>
+            <p>Hi ${order.user.username},</p>
             <p>Your order with ID: <strong>${order._id}</strong> status has been updated to: <strong>${req.body.status}</strong></p>
             
             <p>Thanks,<br>Frozen Delights Team</p>
@@ -281,6 +281,14 @@ exports.deleteOrder = async (req, res) => {
 
         if (!order) {
             return res.status(404).json({ message: 'Order not found with this Id' });
+        }
+
+        // Vendor authorization check
+        if (req.user.role === 'vendor') {
+            const isVendorOrder = order.orderItems.some(item => item.vendor.toString() === req.user._id.toString());
+            if (!isVendorOrder) {
+                return res.status(403).json({ message: 'Not authorized to delete this order' });
+            }
         }
 
         await order.deleteOne();
@@ -321,5 +329,102 @@ exports.cancelOrder = async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+};
+
+// Request Return (User)
+exports.requestReturn = async (req, res) => {
+    try {
+        const { reason, description } = req.body;
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        if (order.user.toString() !== req.user.id) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        if (order.orderStatus !== 'Delivered') {
+            return res.status(400).json({ message: 'Order must be delivered to be returned' });
+        }
+
+        if (order.returnRequest && order.returnRequest.status !== 'Pending') {
+            if (order.returnRequest.requestedAt) {
+                return res.status(400).json({ message: 'Return request already submitted' });
+            }
+        }
+
+        const images = req.files ? req.files.map(file => file.path) : [];
+
+        order.returnRequest = {
+            reason,
+            description,
+            images,
+            status: 'Pending',
+            requestedAt: Date.now()
+        };
+
+        order.orderStatus = 'Return Requested';
+
+        await order.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Return request submitted successfully',
+            order
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Handle Return Request (Admin)
+exports.handleReturnRequest = async (req, res) => {
+    try {
+        const { status } = req.body; // 'Approved' or 'Rejected'
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        if (!order.returnRequest || !order.returnRequest.requestedAt) {
+            return res.status(400).json({ message: 'No return request found for this order' });
+        }
+
+        // Check if vendor is authorized
+        if (req.user.role === 'vendor') {
+            const isVendorOrder = order.orderItems.some(item => item.vendor.toString() === req.user._id.toString());
+            if (!isVendorOrder) {
+                return res.status(403).json({ message: 'Not authorized to manage this return' });
+            }
+        }
+
+        if (status === 'Approved') {
+            order.returnRequest.status = 'Approved';
+            order.orderStatus = 'Returned';
+
+            // Logic to restock could go here if needed
+
+        } else if (status === 'Rejected') {
+            order.returnRequest.status = 'Rejected';
+            order.orderStatus = 'Delivered'; // Revert to delivered
+        } else {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        await order.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Return request ${status}`,
+            order
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };

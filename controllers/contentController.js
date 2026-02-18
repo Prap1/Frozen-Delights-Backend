@@ -115,6 +115,9 @@ exports.getAllContent = async (req, res) => {
 // Admin: Create Content
 exports.createContent = async (req, res) => {
     try {
+        if (req.file) {
+            req.body.image = `/uploads/${req.file.filename}`;
+        }
         const content = await Content.create(req.body);
         res.status(201).json({ success: true, content });
     } catch (err) {
@@ -125,6 +128,9 @@ exports.createContent = async (req, res) => {
 // Admin: Update Content
 exports.updateContent = async (req, res) => {
     try {
+        if (req.file) {
+            req.body.image = `/uploads/${req.file.filename}`;
+        }
         const content = await Content.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.status(200).json({ success: true, content });
     } catch (err) {

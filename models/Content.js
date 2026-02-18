@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const contentSchema = new mongoose.Schema({
     type: {
         type: String,
-        enum: ['feature', 'announcement', 'about', 'faq', 'privacy', 'terms'],
+        enum: ['feature', 'announcement', 'about', 'faq', 'privacy', 'terms', 'hero', 'highlight', 'variant'],
         required: true
     },
     title: {
@@ -22,6 +22,12 @@ const contentSchema = new mongoose.Schema({
     },
     icon: {
         type: String // For features (emoji or icon class)
+    },
+    link: {
+        type: String // For CTA buttons
+    },
+    ctaText: {
+        type: String // For CTA button text
     },
     isActive: {
         type: Boolean,

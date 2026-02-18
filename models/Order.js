@@ -54,6 +54,17 @@ const orderSchema = new mongoose.Schema({
     shippedAt: Date,
     outForDeliveryAt: Date,
     deliveredAt: Date,
+    returnRequest: {
+        reason: { type: String },
+        description: { type: String },
+        images: [{ type: String }],
+        status: {
+            type: String,
+            enum: ['Pending', 'Approved', 'Rejected'],
+            default: 'Pending'
+        },
+        requestedAt: { type: Date }
+    },
     createdAt: {
         type: Date,
         default: Date.now

@@ -18,6 +18,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+        default: 'Male'
+    },
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+        default: 'Male'
+    },
     password: {
         type: String,
         required: true
@@ -28,6 +38,10 @@ const userSchema = new mongoose.Schema({
         default: 'user'
     },
     isVerified: {
+        type: Boolean,
+        default: false
+    },
+    isBlocked: {
         type: Boolean,
         default: false
     },

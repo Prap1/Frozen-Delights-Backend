@@ -192,3 +192,24 @@ exports.updateVendorStatus = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// Toggle Block Status (Admin)
+exports.toggleBlockStatus = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.isBlocked = !user.isBlocked;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: `User has been ${user.isBlocked ? 'blocked' : 'unblocked'}`,
+            user
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};

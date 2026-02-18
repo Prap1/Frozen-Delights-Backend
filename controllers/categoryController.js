@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const Product = require('../models/Product');
 
 // Create Category (Admin)
 exports.createCategory = async (req, res) => {
@@ -53,11 +54,21 @@ exports.updateCategory = async (req, res) => {
             return res.status(404).json({ message: 'Category not found' });
         }
 
+        const oldName = category.name;
+
         category = await Category.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true,
             useFindAndModify: false
         });
+
+        // If name has changed, update all associated products
+        if (req.body.name && req.body.name !== oldName) {
+            await Product.updateMany(
+                { category: oldName },
+                { category: req.body.name }
+            );
+        }
 
         res.status(200).json({
             success: true,

@@ -5,6 +5,7 @@ const {
     getContent, getAllContent, createContent, updateContent, deleteContent
 } = require('../controllers/contentController');
 const { protect, authorize } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 
 // Public
 router.get('/banners', getBanners);
@@ -23,10 +24,10 @@ router.route('/admin/banners/:id')
 
 router.route('/admin/items')
     .get(getAllContent)
-    .post(createContent);
+    .post(upload.single('image'), createContent);
 
 router.route('/admin/items/:id')
-    .put(updateContent)
+    .put(upload.single('image'), updateContent)
     .delete(deleteContent);
 
 module.exports = router;

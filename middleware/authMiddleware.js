@@ -33,6 +33,10 @@ exports.protect = async (req, res, next) => {
             return res.status(401).json({ message: 'User not found' });
         }
 
+        if (user.isBlocked) {
+            return res.status(401).json({ message: 'Your account has been blocked. Please contact support.' });
+        }
+
         // 5️⃣ Attach user to request
         req.user = user;
         next();

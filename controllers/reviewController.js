@@ -108,6 +108,28 @@ exports.getProductReviews = async (req, res) => {
     }
 };
 
+// Get Vendor Reviews
+exports.getVendorReviews = async (req, res) => {
+    try {
+        // Find all products by this vendor
+        const products = await Product.find({ vendor: req.user.id });
+        const productIds = products.map(product => product._id);
+
+        // Find reviews for these products
+        const reviews = await Review.find({ product: { $in: productIds } })
+            .populate('user', 'username')
+            .populate('product', 'name')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            reviews
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // Delete Review (Admin)
 exports.deleteReview = async (req, res) => {
     try {

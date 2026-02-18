@@ -7,7 +7,8 @@ const {
     login,
     logout,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    updatePassword
 } = require('../controllers/authController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -19,6 +20,7 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+router.put('/update-password', protect, updatePassword);
 
 /* ===================== CHECK AUTH (VERY IMPORTANT) ===================== */
 router.get('/me', protect, (req, res) => {

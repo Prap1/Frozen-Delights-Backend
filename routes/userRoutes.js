@@ -8,7 +8,8 @@ const {
     requestVendorDetails,
     getAllVendorRequests,
     updateVendorStatus,
-    updateUserProfile
+    updateUserProfile,
+    toggleBlockStatus
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
@@ -22,6 +23,7 @@ router.post('/become-vendor', requestVendorDetails);
 // Admin routes
 router.get('/admin/vendor-requests', authorize('admin'), getAllVendorRequests);
 router.put('/admin/vendor-status/:id', authorize('admin'), updateVendorStatus);
+router.put('/admin/users/:id/block', authorize('admin'), toggleBlockStatus);
 
 router.route('/')
     .get(authorize('admin'), getAllUsers);
