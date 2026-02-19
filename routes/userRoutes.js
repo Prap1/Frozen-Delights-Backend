@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
     getAllUsers,
+    createUser,
     getSingleUser,
     updateUserRole,
     deleteUser,
@@ -26,7 +27,8 @@ router.put('/admin/vendor-status/:id', authorize('admin'), updateVendorStatus);
 router.put('/admin/users/:id/block', authorize('admin'), toggleBlockStatus);
 
 router.route('/')
-    .get(authorize('admin'), getAllUsers);
+    .get(authorize('admin'), getAllUsers)
+    .post(authorize('admin'), createUser);
 
 router.route('/:id')
     .get(authorize('admin'), getSingleUser)

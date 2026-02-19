@@ -1,4 +1,45 @@
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+
+// Create User (Admin)
+exports.createUser = async (req, res) => {
+    const { username, email, password, role } = req.body;
+
+    if (!username || !email || !password || !role) {
+        return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    try {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await User.create({
+            username,
+            email,
+            password: hashedPassword,
+            role,
+            isVerified: true, // Admin created users are verified by default
+        });
+
+        res.status(201).json({
+            success: true,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+            },
+            message: 'User created successfully'
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
 
 // Get all users (Admin)
 exports.getAllUsers = async (req, res) => {
