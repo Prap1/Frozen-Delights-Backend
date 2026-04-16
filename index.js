@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-    origin: 'http://localhost:5173', // Vite default port
+    origin: 'https://frozen-delights-backend.vercel.app', // Vite default port
     credentials: true
 }));
 
